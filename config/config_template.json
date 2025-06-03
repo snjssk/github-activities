@@ -1,0 +1,31 @@
+{
+  "github": {
+    "api_token": "YOUR_GITHUB_PERSONAL_ACCESS_TOKEN",
+    "api_url": "https://api.github.com",
+    "user_agent": "GitHub-Activities-Tracker"
+  },
+  "app": {
+    "default_username": "",
+    "date_range": {
+      "start_date": "2023-01-01",
+      "end_date": "2023-12-31"
+    },
+    "metrics": {
+      "commits": true,
+      "pull_requests": true,
+      "issues": true,
+      "reviews": true,
+      "comments": true,
+      "stars": true
+    },
+    "cache": {
+      "enabled": true,
+      "expiry_hours": 24
+    }
+  },
+  "display": {
+    "theme": "dark",
+    "chart_type": "bar",
+    "output_format": "terminal"
+  }
+}
