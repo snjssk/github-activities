@@ -66,6 +66,56 @@ def display_activity_summary(user_data):
     console.print(table)
 
 
+def display_aggregated_activity(user_data, aggregation):
+    """Display activity data aggregated by week or month."""
+    aggregated = user_data["aggregated"]
+    period_name = "Week" if aggregation == "week" else "Month"
+
+    # Display aggregated commits
+    if aggregated["commits"]:
+        commit_table = Table(title=f"Commits by {period_name}")
+        commit_table.add_column(period_name, style="cyan")
+        commit_table.add_column("Count", style="green")
+
+        for period, count in aggregated["commits"]:
+            commit_table.add_row(period, str(count))
+
+        console.print(commit_table)
+
+    # Display aggregated pull requests
+    if aggregated["pull_requests"]:
+        pr_table = Table(title=f"Pull Requests by {period_name}")
+        pr_table.add_column(period_name, style="cyan")
+        pr_table.add_column("Count", style="green")
+
+        for period, count in aggregated["pull_requests"]:
+            pr_table.add_row(period, str(count))
+
+        console.print(pr_table)
+
+    # Display aggregated issues
+    if aggregated["issues"]:
+        issue_table = Table(title=f"Issues by {period_name}")
+        issue_table.add_column(period_name, style="cyan")
+        issue_table.add_column("Count", style="green")
+
+        for period, count in aggregated["issues"]:
+            issue_table.add_row(period, str(count))
+
+        console.print(issue_table)
+
+    # Display aggregated reviews
+    if aggregated["reviews"]:
+        review_table = Table(title=f"Reviews by {period_name}")
+        review_table.add_column(period_name, style="cyan")
+        review_table.add_column("Count", style="green")
+
+        for period, count in aggregated["reviews"]:
+            review_table.add_row(period, str(count))
+
+        console.print(review_table)
+
+
 def display_recent_activity(user_data):
     """Display recent activity details."""
     details = user_data["details"]
@@ -149,7 +199,12 @@ def cli():
     "--repository", "-r",
     help="Repository name to filter by (e.g., 'owner/repo'). If not provided, all repositories will be included."
 )
-def summary(username, token, config, days, repository):
+@click.option(
+    "--aggregation", "-a",
+    type=click.Choice(["week", "month"]),
+    help="Aggregate data by week or month."
+)
+def summary(username, token, config, days, repository, aggregation):
     """Display a summary of GitHub activities for a user."""
     try:
         # Initialize the GitHub client
@@ -163,7 +218,9 @@ def summary(username, token, config, days, repository):
         console.print(f"Fetching GitHub activity for [bold]{username}[/bold]...")
         if repository:
             console.print(f"Filtering by repository: [bold]{repository}[/bold]")
-        user_data = client.get_user_activity_summary(username, since, until, repository)
+        if aggregation:
+            console.print(f"Aggregating data by: [bold]{aggregation}[/bold]")
+        user_data = client.get_user_activity_summary(username, since, until, repository, aggregation)
 
         # Display the data
         console.print()
@@ -171,6 +228,12 @@ def summary(username, token, config, days, repository):
         console.print()
         display_activity_summary(user_data)
         console.print()
+
+        # Display aggregated data if requested
+        if aggregation and "aggregated" in user_data:
+            display_aggregated_activity(user_data, aggregation)
+            console.print()
+
         display_recent_activity(user_data)
 
     except Exception as e:
@@ -203,7 +266,12 @@ def summary(username, token, config, days, repository):
     "--repository", "-r",
     help="Repository name to filter by (e.g., 'owner/repo'). If not provided, all repositories will be included."
 )
-def export(username, token, config, days, output, repository):
+@click.option(
+    "--aggregation", "-a",
+    type=click.Choice(["week", "month"]),
+    help="Aggregate data by week or month."
+)
+def export(username, token, config, days, output, repository, aggregation):
     """Export GitHub activities data as JSON."""
     try:
         # Initialize the GitHub client
@@ -217,7 +285,9 @@ def export(username, token, config, days, output, repository):
         console.print(f"Fetching GitHub activity for [bold]{username}[/bold]...")
         if repository:
             console.print(f"Filtering by repository: [bold]{repository}[/bold]")
-        user_data = client.get_user_activity_summary(username, since, until, repository)
+        if aggregation:
+            console.print(f"Aggregating data by: [bold]{aggregation}[/bold]")
+        user_data = client.get_user_activity_summary(username, since, until, repository, aggregation)
 
         # Determine output path
         if not output:

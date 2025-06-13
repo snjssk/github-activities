@@ -75,6 +75,7 @@ github-activities summary <username>
 - `--config`, `-c`: Path to config file
 - `--days`, `-d`: Number of days to look back for activity (default: 365)
 - `--repository`, `-r`: Filter activity to a specific repository (format: 'owner/repo'). If not provided, all repositories will be included
+- `--aggregation`, `-a`: Aggregate data by week or month (values: 'week' or 'month')
 
 ### Exporting activity data as JSON
 ```bash
@@ -87,6 +88,7 @@ github-activities export <username> --output data.json
 - `--days`, `-d`: Number of days to look back for activity (default: 365)
 - `--output`, `-o`: Output file path (default: username_github_activity_YYYYMMDD.json)
 - `--repository`, `-r`: Filter activity to a specific repository (format: 'owner/repo'). If not provided, all repositories will be included
+- `--aggregation`, `-a`: Aggregate data by week or month (values: 'week' or 'month')
 
 ## Examples
 
@@ -110,9 +112,29 @@ github-activities export octocat --output octocat_activity.json
 github-activities summary octocat --repository octocat/Hello-World
 ```
 
+### Aggregate activity by week
+```bash
+github-activities summary octocat --aggregation week
+```
+
+### Aggregate activity by month
+```bash
+github-activities summary octocat --aggregation month
+```
+
 ### Export activity from a specific repository
 ```bash
 github-activities export octocat --repository octocat/Hello-World --output octocat_hello_world.json
+```
+
+### Export activity with weekly aggregation
+```bash
+github-activities export octocat --aggregation week --output octocat_weekly.json
+```
+
+### Export activity with monthly aggregation
+```bash
+github-activities export octocat --aggregation month --output octocat_monthly.json
 ```
 
 ## API Reference
@@ -130,6 +152,12 @@ activity = client.get_user_activity_summary("octocat")
 
 # Get user activity summary for a specific repository
 activity = client.get_user_activity_summary("octocat", repository="octocat/Hello-World")
+
+# Get user activity summary with weekly aggregation
+activity = client.get_user_activity_summary("octocat", aggregation="week")
+
+# Get user activity summary with monthly aggregation
+activity = client.get_user_activity_summary("octocat", aggregation="month")
 
 # Get specific activity types
 commits = client.get_user_commits("octocat")

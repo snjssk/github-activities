@@ -268,9 +268,52 @@ class GitHubClient:
             logger.error(f"Error fetching reviews for user {username}: {e}")
             return []
 
+    def _aggregate_by_period(self, data, period_type):
+        """
+        Aggregate data by week or month.
+
+        Args:
+            data: List of dictionaries containing activity data.
+            period_type: 'week' or 'month'.
+
+        Returns:
+            Dictionary with aggregated data by period.
+        """
+        aggregated = {}
+        date_format = "%Y-W%W" if period_type == 'week' else "%Y-%m"
+
+        for item in data:
+            # Determine the date field based on the item structure
+            if 'date' in item:
+                date_str = item['date']
+            elif 'created_at' in item:
+                date_str = item['created_at']
+            elif 'reviewed_at' in item:
+                date_str = item['reviewed_at']
+            else:
+                continue
+
+            # Parse the date
+            try:
+                date = datetime.fromisoformat(date_str.replace('Z', '+00:00'))
+                period_key = date.strftime(date_format)
+
+                if period_key not in aggregated:
+                    aggregated[period_key] = 0
+                aggregated[period_key] += 1
+            except (ValueError, TypeError):
+                continue
+
+        # Convert to sorted list of tuples
+        result = [(k, v) for k, v in aggregated.items()]
+        result.sort(key=lambda x: x[0])
+
+        return result
+
     def get_user_activity_summary(self, username: str, since: Optional[datetime] = None,
                                  until: Optional[datetime] = None,
-                                 repository: Optional[str] = None) -> Dict:
+                                 repository: Optional[str] = None,
+                                 aggregation: Optional[str] = None) -> Dict:
         """
         Get a summary of user activity.
 
@@ -279,6 +322,7 @@ class GitHubClient:
             since: Start date for activity search.
             until: End date for activity search.
             repository: Repository name to filter by (e.g., "owner/repo").
+            aggregation: Type of aggregation ('week', 'month', or None for no aggregation).
 
         Returns:
             Dictionary with activity summary.
@@ -296,7 +340,7 @@ class GitHubClient:
         # Get user profile info
         user = self.get_user(username)
 
-        return {
+        result = {
             "user": {
                 "login": user.login,
                 "name": user.name,
@@ -326,3 +370,14 @@ class GitHubClient:
                 "reviews": reviews[:5]
             }
         }
+
+        # Add aggregated data if requested
+        if aggregation in ('week', 'month'):
+            result["aggregated"] = {
+                "commits": self._aggregate_by_period(commits, aggregation),
+                "pull_requests": self._aggregate_by_period(pull_requests, aggregation),
+                "issues": self._aggregate_by_period(issues, aggregation),
+                "reviews": self._aggregate_by_period(reviews, aggregation)
+            }
+
+        return result

@@ -69,6 +69,7 @@ github-activities summary <ユーザー名>
 - `--config`, `-c`: 設定ファイルのパス（デフォルトは`config/config.json`）
 - `--days`, `-d`: アクティビティを取得する日数（デフォルトは365日）
 - `--repository`, `-r`: 特定のリポジトリからのみデータを取得（例：`owner/repo`）。指定しない場合はすべてのリポジトリが対象
+- `--aggregation`, `-a`: データを週単位または月単位で集計（`week`または`month`）
 
 例：
 ```
@@ -78,6 +79,16 @@ github-activities summary octocat --days 30
 特定のリポジトリからのみデータを取得する例：
 ```
 github-activities summary octocat --repository octocat/Hello-World
+```
+
+週単位でデータを集計する例：
+```
+github-activities summary octocat --aggregation week
+```
+
+月単位でデータを集計する例：
+```
+github-activities summary octocat --aggregation month
 ```
 
 ### アクティビティデータをエクスポートする
@@ -94,6 +105,7 @@ github-activities export <ユーザー名>
 - `--days`, `-d`: アクティビティを取得する日数
 - `--output`, `-o`: 出力ファイルのパス（指定しない場合は`<ユーザー名>_github_activity_<日付>.json`）
 - `--repository`, `-r`: 特定のリポジトリからのみデータを取得（例：`owner/repo`）。指定しない場合はすべてのリポジトリが対象
+- `--aggregation`, `-a`: データを週単位または月単位で集計（`week`または`month`）
 
 例：
 ```
@@ -103,6 +115,16 @@ github-activities export octocat --output octocat_activity.json
 特定のリポジトリからのみデータをエクスポートする例：
 ```
 github-activities export octocat --repository octocat/Hello-World --output octocat_hello_world.json
+```
+
+週単位でデータを集計してエクスポートする例：
+```
+github-activities export octocat --aggregation week --output octocat_weekly.json
+```
+
+月単位でデータを集計してエクスポートする例：
+```
+github-activities export octocat --aggregation month --output octocat_monthly.json
 ```
 
 ## トラブルシューティング
