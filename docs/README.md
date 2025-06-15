@@ -77,7 +77,7 @@ github-activities summary <username>
 - `--repository`, `-r`: Filter activity to a specific repository (format: 'owner/repo'). If not provided, all repositories will be included
 - `--aggregation`, `-a`: Aggregate data by week or month (values: 'week' or 'month')
 
-### Exporting activity data as JSON
+### Exporting activity data
 ```bash
 github-activities export <username> --output data.json
 ```
@@ -86,9 +86,10 @@ github-activities export <username> --output data.json
 - `--token`, `-t`: GitHub API token (overrides config file)
 - `--config`, `-c`: Path to config file
 - `--days`, `-d`: Number of days to look back for activity (default: 365)
-- `--output`, `-o`: Output file path (default: username_github_activity_YYYYMMDD.json)
+- `--output`, `-o`: Output file path (default: username_github_activity_YYYYMMDD.json or username_github_activity_YYYYMMDD.html)
 - `--repository`, `-r`: Filter activity to a specific repository (format: 'owner/repo'). If not provided, all repositories will be included
 - `--aggregation`, `-a`: Aggregate data by week or month (values: 'week' or 'month')
+- `--format`, `-f`: Output format (values: 'json' or 'html', default: 'json')
 
 ## Examples
 
@@ -135,6 +136,16 @@ github-activities export octocat --aggregation week --output octocat_weekly.json
 ### Export activity with monthly aggregation
 ```bash
 github-activities export octocat --aggregation month --output octocat_monthly.json
+```
+
+### Export activity as HTML with visualizations
+```bash
+github-activities export octocat --format html --output octocat_report.html
+```
+
+### Export activity as HTML with weekly aggregation for better visualizations
+```bash
+github-activities export octocat --format html --aggregation week --output octocat_weekly_report.html
 ```
 
 ## API Reference

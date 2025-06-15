@@ -93,7 +93,7 @@ github-activities summary octocat --aggregation month
 
 ### アクティビティデータをエクスポートする
 
-GitHubアクティビティデータをJSONファイルとしてエクスポートするには：
+GitHubアクティビティデータをJSONファイルまたはHTMLレポートとしてエクスポートするには：
 
 ```
 github-activities export <ユーザー名>
@@ -103,9 +103,10 @@ github-activities export <ユーザー名>
 - `--token`, `-t`: GitHubのAPIトークン
 - `--config`, `-c`: 設定ファイルのパス
 - `--days`, `-d`: アクティビティを取得する日数
-- `--output`, `-o`: 出力ファイルのパス（指定しない場合は`<ユーザー名>_github_activity_<日付>.json`）
+- `--output`, `-o`: 出力ファイルのパス（指定しない場合は`<ユーザー名>_github_activity_<日付>.json`または`<ユーザー名>_github_activity_<日付>.html`）
 - `--repository`, `-r`: 特定のリポジトリからのみデータを取得（例：`owner/repo`）。指定しない場合はすべてのリポジトリが対象
 - `--aggregation`, `-a`: データを週単位または月単位で集計（`week`または`month`）
+- `--format`, `-f`: 出力形式（`json`または`html`、デフォルトは`json`）
 
 例：
 ```
@@ -125,6 +126,16 @@ github-activities export octocat --aggregation week --output octocat_weekly.json
 月単位でデータを集計してエクスポートする例：
 ```
 github-activities export octocat --aggregation month --output octocat_monthly.json
+```
+
+HTMLレポートとして可視化してエクスポートする例：
+```
+github-activities export octocat --format html --output octocat_report.html
+```
+
+週単位で集計したデータをHTMLレポートとして可視化してエクスポートする例：
+```
+github-activities export octocat --format html --aggregation week --output octocat_weekly_report.html
 ```
 
 ## トラブルシューティング

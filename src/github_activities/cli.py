@@ -19,6 +19,7 @@ from rich.table import Table
 from rich.text import Text
 
 from github_activities.github_client import GitHubClient
+from github_activities.html_reporter import HTMLReporter
 
 # Set up logging
 logging.basicConfig(
@@ -260,7 +261,7 @@ def summary(username, token, config, days, repository, aggregation):
 )
 @click.option(
     "--output", "-o",
-    help="Output file path for JSON data."
+    help="Output file path for data."
 )
 @click.option(
     "--repository", "-r",
@@ -271,8 +272,14 @@ def summary(username, token, config, days, repository, aggregation):
     type=click.Choice(["week", "month"]),
     help="Aggregate data by week or month."
 )
-def export(username, token, config, days, output, repository, aggregation):
-    """Export GitHub activities data as JSON."""
+@click.option(
+    "--format", "-f",
+    type=click.Choice(["json", "html"]),
+    default="json",
+    help="Output format (json or html). Default is json."
+)
+def export(username, token, config, days, output, repository, aggregation, format):
+    """Export GitHub activities data as JSON or HTML."""
     try:
         # Initialize the GitHub client
         client = GitHubClient(token=token, config_path=config)
@@ -289,15 +296,35 @@ def export(username, token, config, days, output, repository, aggregation):
             console.print(f"Aggregating data by: [bold]{aggregation}[/bold]")
         user_data = client.get_user_activity_summary(username, since, until, repository, aggregation)
 
-        # Determine output path
-        if not output:
-            output = f"{username}_github_activity_{datetime.now().strftime('%Y%m%d')}.json"
+        # Determine output path and format
+        timestamp = datetime.now().strftime('%Y%m%d')
 
-        # Write to file
-        with open(output, "w") as f:
-            json.dump(user_data, f, indent=2)
+        if format == "json":
+            # JSON output
+            if not output:
+                output = f"{username}_github_activity_{timestamp}.json"
 
-        console.print(f"Data exported to [bold]{output}[/bold]")
+            # Write to JSON file
+            with open(output, "w") as f:
+                json.dump(user_data, f, indent=2)
+
+            console.print(f"Data exported to [bold]{output}[/bold] in JSON format")
+
+        elif format == "html":
+            # HTML output
+            if not output:
+                output = f"{username}_github_activity_{timestamp}.html"
+
+            # Initialize HTML reporter and generate report
+            reporter = HTMLReporter()
+            html_path = reporter.generate_html_report(user_data, output)
+
+            console.print(f"Report exported to [bold]{html_path}[/bold] in HTML format")
+
+            # If aggregation was not specified but HTML format was requested,
+            # suggest using aggregation for better visualization
+            if not aggregation:
+                console.print("[yellow]Tip:[/yellow] For better visualizations in HTML reports, try using --aggregation week or --aggregation month")
 
     except Exception as e:
         console.print(f"[bold red]Error:[/bold red] {str(e)}")
