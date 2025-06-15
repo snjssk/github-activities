@@ -1,0 +1,2 @@
+# This file is intentionally empty to ensure the reports directory is tracked by Git.
+# The actual report files will be ignored by Git as specified in the .gitignore file.
