@@ -103,9 +103,9 @@ github-activities export <ユーザー名>
 - `--token`, `-t`: GitHubのAPIトークン
 - `--config`, `-c`: 設定ファイルのパス
 - `--days`, `-d`: アクティビティを取得する日数
-- `--output`, `-o`: 出力ファイルのパス（指定しない場合は`<ユーザー名>_github_activity_<日付>.json`または`<ユーザー名>_github_activity_<日付>.html`）
+- `--output`, `-o`: 出力ファイルのパス（指定しない場合はJSONでは`<ユーザー名>_github_activity_<日付時刻>.json`、HTMLでは`reports/<ユーザー名>_github_activity_<集計単位>_<日付時刻>.html`）
 - `--repository`, `-r`: 特定のリポジトリからのみデータを取得（例：`owner/repo`）。指定しない場合はすべてのリポジトリが対象
-- `--aggregation`, `-a`: データを週単位または月単位で集計（`week`または`month`）
+- `--aggregation`, `-a`: データを週単位または月単位で集計（`week`または`month`）。HTML出力の場合、指定がなければデフォルトで`week`が使用されます
 - `--format`, `-f`: 出力形式（`json`または`html`、デフォルトは`json`）
 
 例：

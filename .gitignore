@@ -27,3 +27,7 @@ config/token.json
 config/config.json
 config/*.key
 config/*.secret
+
+# Output reports
+reports/*
+!reports/.gitkeep

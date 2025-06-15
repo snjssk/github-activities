@@ -297,7 +297,7 @@ def export(username, token, config, days, output, repository, aggregation, forma
         user_data = client.get_user_activity_summary(username, since, until, repository, aggregation)
 
         # Determine output path and format
-        timestamp = datetime.now().strftime('%Y%m%d')
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
 
         if format == "json":
             # JSON output
@@ -312,19 +312,30 @@ def export(username, token, config, days, output, repository, aggregation, forma
 
         elif format == "html":
             # HTML output
+            # Ensure aggregation is specified for HTML output
+            if not aggregation:
+                console.print("[yellow]Warning:[/yellow] No aggregation specified. Using 'week' as default for better visualizations.")
+                aggregation = "week"
+                # Re-fetch data with aggregation
+                user_data = client.get_user_activity_summary(username, since, until, repository, aggregation)
+
+            # Create reports directory if it doesn't exist
+            reports_dir = "reports"
+            if not os.path.exists(reports_dir):
+                os.makedirs(reports_dir)
+
+            # Generate filename with aggregation type and timestamp
             if not output:
-                output = f"{username}_github_activity_{timestamp}.html"
+                output = os.path.join(reports_dir, f"{username}_github_activity_{aggregation}_{timestamp}.html")
+            elif not os.path.isabs(output):
+                # If output is not an absolute path, put it in the reports directory
+                output = os.path.join(reports_dir, output)
 
             # Initialize HTML reporter and generate report
             reporter = HTMLReporter()
             html_path = reporter.generate_html_report(user_data, output)
 
             console.print(f"Report exported to [bold]{html_path}[/bold] in HTML format")
-
-            # If aggregation was not specified but HTML format was requested,
-            # suggest using aggregation for better visualization
-            if not aggregation:
-                console.print("[yellow]Tip:[/yellow] For better visualizations in HTML reports, try using --aggregation week or --aggregation month")
 
     except Exception as e:
         console.print(f"[bold red]Error:[/bold red] {str(e)}")

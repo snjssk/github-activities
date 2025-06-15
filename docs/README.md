@@ -86,9 +86,9 @@ github-activities export <username> --output data.json
 - `--token`, `-t`: GitHub API token (overrides config file)
 - `--config`, `-c`: Path to config file
 - `--days`, `-d`: Number of days to look back for activity (default: 365)
-- `--output`, `-o`: Output file path (default: username_github_activity_YYYYMMDD.json or username_github_activity_YYYYMMDD.html)
+- `--output`, `-o`: Output file path (default: username_github_activity_YYYYMMDD_HHMMSS.json for JSON or reports/username_github_activity_aggregation_YYYYMMDD_HHMMSS.html for HTML)
 - `--repository`, `-r`: Filter activity to a specific repository (format: 'owner/repo'). If not provided, all repositories will be included
-- `--aggregation`, `-a`: Aggregate data by week or month (values: 'week' or 'month')
+- `--aggregation`, `-a`: Aggregate data by week or month (values: 'week' or 'month'). For HTML output, 'week' is used by default if not specified
 - `--format`, `-f`: Output format (values: 'json' or 'html', default: 'json')
 
 ## Examples
