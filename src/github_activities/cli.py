@@ -205,7 +205,12 @@ def cli():
     type=click.Choice(["week", "month"]),
     help="Aggregate data by week or month."
 )
-def summary(username, token, config, days, repository, aggregation):
+@click.option(
+    "--jp-week-format", "-j",
+    is_flag=True,
+    help="Use Japanese-style week notation (showing start date) instead of W01 format."
+)
+def summary(username, token, config, days, repository, aggregation, jp_week_format):
     """Display a summary of GitHub activities for a user."""
     try:
         # Initialize the GitHub client
@@ -232,6 +237,17 @@ def summary(username, token, config, days, repository, aggregation):
 
         # Display aggregated data if requested
         if aggregation and "aggregated" in user_data:
+            # If jp_week_format is enabled, convert week numbers to Japanese-style notation
+            if jp_week_format and aggregation == "week":
+                for activity_type in user_data["aggregated"]:
+                    if user_data["aggregated"][activity_type]:
+                        # Create a temporary HTMLReporter to use its conversion method
+                        reporter = HTMLReporter(jp_week_format=True)
+                        for i, (period, count) in enumerate(user_data["aggregated"][activity_type]):
+                            if "-W" in period:
+                                jp_period = reporter._convert_week_to_jp_format(period)
+                                user_data["aggregated"][activity_type][i] = (jp_period, count)
+
             display_aggregated_activity(user_data, aggregation)
             console.print()
 
@@ -278,7 +294,12 @@ def summary(username, token, config, days, repository, aggregation):
     default="json",
     help="Output format (json or html). Default is json."
 )
-def export(username, token, config, days, output, repository, aggregation, format):
+@click.option(
+    "--jp-week-format", "-j",
+    is_flag=True,
+    help="Use Japanese-style week notation (showing start date) instead of W01 format."
+)
+def export(username, token, config, days, output, repository, aggregation, format, jp_week_format):
     """Export GitHub activities data as JSON or HTML."""
     try:
         # Initialize the GitHub client
@@ -332,7 +353,7 @@ def export(username, token, config, days, output, repository, aggregation, forma
                 output = os.path.join(reports_dir, output)
 
             # Initialize HTML reporter and generate report
-            reporter = HTMLReporter()
+            reporter = HTMLReporter(jp_week_format=jp_week_format)
             html_path = reporter.generate_html_report(user_data, output)
 
             console.print(f"Report exported to [bold]{html_path}[/bold] in HTML format")

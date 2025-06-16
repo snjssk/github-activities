@@ -268,13 +268,15 @@ class GitHubClient:
             logger.error(f"Error fetching reviews for user {username}: {e}")
             return []
 
-    def _aggregate_by_period(self, data, period_type):
+    def _aggregate_by_period(self, data, period_type, since=None, until=None):
         """
         Aggregate data by week or month.
 
         Args:
             data: List of dictionaries containing activity data.
             period_type: 'week' or 'month'.
+            since: Start date for activity search.
+            until: End date for activity search.
 
         Returns:
             Dictionary with aggregated data by period.
@@ -282,6 +284,7 @@ class GitHubClient:
         aggregated = {}
         date_format = "%Y-W%W" if period_type == 'week' else "%Y-%m"
 
+        # First, aggregate the actual data
         for item in data:
             # Determine the date field based on the item structure
             if 'date' in item:
@@ -303,6 +306,24 @@ class GitHubClient:
                 aggregated[period_key] += 1
             except (ValueError, TypeError):
                 continue
+
+        # If since and until are provided, fill in missing periods with zero values
+        if since and until:
+            # Generate all periods between since and until
+            current = since
+            while current <= until:
+                period_key = current.strftime(date_format)
+                if period_key not in aggregated:
+                    aggregated[period_key] = 0
+
+                # Move to next period
+                if period_type == 'week':
+                    current += timedelta(days=7)
+                else:  # month
+                    # Move to the first day of the next month
+                    year = current.year + (current.month // 12)
+                    month = (current.month % 12) + 1
+                    current = datetime(year, month, 1)
 
         # Convert to sorted list of tuples
         result = [(k, v) for k, v in aggregated.items()]
@@ -374,10 +395,10 @@ class GitHubClient:
         # Add aggregated data if requested
         if aggregation in ('week', 'month'):
             result["aggregated"] = {
-                "commits": self._aggregate_by_period(commits, aggregation),
-                "pull_requests": self._aggregate_by_period(pull_requests, aggregation),
-                "issues": self._aggregate_by_period(issues, aggregation),
-                "reviews": self._aggregate_by_period(reviews, aggregation)
+                "commits": self._aggregate_by_period(commits, aggregation, since, until),
+                "pull_requests": self._aggregate_by_period(pull_requests, aggregation, since, until),
+                "issues": self._aggregate_by_period(issues, aggregation, since, until),
+                "reviews": self._aggregate_by_period(reviews, aggregation, since, until)
             }
 
         return result

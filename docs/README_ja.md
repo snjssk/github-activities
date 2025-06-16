@@ -70,6 +70,7 @@ github-activities summary <ユーザー名>
 - `--days`, `-d`: アクティビティを取得する日数（デフォルトは365日）
 - `--repository`, `-r`: 特定のリポジトリからのみデータを取得（例：`owner/repo`）。指定しない場合はすべてのリポジトリが対象
 - `--aggregation`, `-a`: データを週単位または月単位で集計（`week`または`month`）
+- `--jp-week-format`, `-j`: 週番号を日本式表記（週の開始日）で表示（W01形式の代わりに）
 
 例：
 ```
@@ -91,6 +92,11 @@ github-activities summary octocat --aggregation week
 github-activities summary octocat --aggregation month
 ```
 
+日本式の週表記（週の開始日）を使用する例：
+```
+github-activities summary octocat --aggregation week --jp-week-format
+```
+
 ### アクティビティデータをエクスポートする
 
 GitHubアクティビティデータをJSONファイルまたはHTMLレポートとしてエクスポートするには：
@@ -107,6 +113,7 @@ github-activities export <ユーザー名>
 - `--repository`, `-r`: 特定のリポジトリからのみデータを取得（例：`owner/repo`）。指定しない場合はすべてのリポジトリが対象
 - `--aggregation`, `-a`: データを週単位または月単位で集計（`week`または`month`）。HTML出力の場合、指定がなければデフォルトで`week`が使用されます
 - `--format`, `-f`: 出力形式（`json`または`html`、デフォルトは`json`）
+- `--jp-week-format`, `-j`: 週番号を日本式表記（週の開始日）で表示（W01形式の代わりに）
 
 例：
 ```
@@ -136,6 +143,11 @@ github-activities export octocat --format html --output octocat_report.html
 週単位で集計したデータをHTMLレポートとして可視化してエクスポートする例：
 ```
 github-activities export octocat --format html --aggregation week --output octocat_weekly_report.html
+```
+
+日本式の週表記（週の開始日）を使用してHTMLレポートをエクスポートする例：
+```
+github-activities export octocat --format html --aggregation week --jp-week-format --output octocat_jp_weekly_report.html
 ```
 
 ## トラブルシューティング
