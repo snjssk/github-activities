@@ -451,11 +451,40 @@ class GitHubClient:
 
         # Add aggregated data if requested
         if aggregation in ('week', 'month'):
+            # Create aggregated data for each activity type
+            aggregated_commits = self._aggregate_by_period(commits, aggregation, since, until)
+            aggregated_pull_requests = self._aggregate_by_period(pull_requests, aggregation, since, until)
+            aggregated_issues = self._aggregate_by_period(issues, aggregation, since, until)
+            aggregated_reviews = self._aggregate_by_period(reviews, aggregation, since, until)
+
+            # Combine all activities to calculate total contributions by period
+            all_periods = set()
+            for period_data in [aggregated_commits, aggregated_pull_requests, aggregated_issues, aggregated_reviews]:
+                all_periods.update([period for period, _ in period_data])
+
+            # Create a dictionary to store total contributions by period
+            total_contributions_dict = {period: 0 for period in all_periods}
+
+            # Add up contributions from each activity type
+            for period, count in aggregated_commits:
+                total_contributions_dict[period] += count
+            for period, count in aggregated_pull_requests:
+                total_contributions_dict[period] += count
+            for period, count in aggregated_issues:
+                total_contributions_dict[period] += count
+            for period, count in aggregated_reviews:
+                total_contributions_dict[period] += count
+
+            # Convert to sorted list of tuples
+            total_contributions = [(period, count) for period, count in total_contributions_dict.items()]
+            total_contributions.sort(key=lambda x: x[0])
+
             result["aggregated"] = {
-                "commits": self._aggregate_by_period(commits, aggregation, since, until),
-                "pull_requests": self._aggregate_by_period(pull_requests, aggregation, since, until),
-                "issues": self._aggregate_by_period(issues, aggregation, since, until),
-                "reviews": self._aggregate_by_period(reviews, aggregation, since, until)
+                "total_contributions": total_contributions,
+                "commits": aggregated_commits,
+                "pull_requests": aggregated_pull_requests,
+                "issues": aggregated_issues,
+                "reviews": aggregated_reviews
             }
 
             # Add aggregated code changes data

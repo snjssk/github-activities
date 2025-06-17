@@ -182,6 +182,8 @@ class HTMLReporter:
             <h2>活動分析</h2>
             <div class="analysis-content" style="margin-top: 15px;">
                 <p><strong>{{ analysis.period }}</strong></p>
+                <h3>総貢献</h3>
+                <p>{{ analysis.total_contributions }}</p>
                 <h3>コミット</h3>
                 <p>{{ analysis.commits }}</p>
                 <h3>プルリクエスト</h3>
@@ -191,6 +193,8 @@ class HTMLReporter:
             <h2>Activity Analysis</h2>
             <div class="analysis-content" style="margin-top: 15px;">
                 <p><strong>{{ analysis.period }}</strong></p>
+                <h3>Total Contributions</h3>
+                <p>{{ analysis.total_contributions }}</p>
                 <h3>Commits</h3>
                 <p>{{ analysis.commits }}</p>
                 <h3>Pull Requests</h3>
@@ -202,6 +206,13 @@ class HTMLReporter:
 
         {% if aggregated %}
         <h2>Activity Trends</h2>
+
+        {% if aggregated.total_contributions %}
+        <div class="chart-container">
+            <h3 class="chart-title">Total Contributions Over Time</h3>
+            <div id="total-contributions-chart"></div>
+        </div>
+        {% endif %}
 
         {% if aggregated.commits %}
         <div class="chart-container">
@@ -248,6 +259,10 @@ class HTMLReporter:
     <script>
         // Plotly chart data
         var plotlyData = {{ plotly_data|safe }};
+
+        {% if aggregated.total_contributions %}
+        Plotly.newPlot('total-contributions-chart', plotlyData.total_contributions.data, plotlyData.total_contributions.layout);
+        {% endif %}
 
         {% if aggregated.commits %}
         Plotly.newPlot('commits-chart', plotlyData.commits.data, plotlyData.commits.layout);
@@ -322,11 +337,13 @@ class HTMLReporter:
         aggregated = user_data.get("aggregated", {})
         commits = aggregated.get("commits", [])
         pull_requests = aggregated.get("pull_requests", [])
+        total_contributions = aggregated.get("total_contributions", [])
 
         # Get summary data
         summary = user_data.get("summary", {})
         commits_count = summary.get("commits_count", 0)
         prs_count = summary.get("pull_requests_count", 0)
+        total_contributions_count = summary.get("total_contributions", 0)
 
         # Analyze commits
         commit_analysis = self._analyze_trend(commits, "commits")
@@ -334,11 +351,15 @@ class HTMLReporter:
         # Analyze pull requests
         pr_analysis = self._analyze_trend(pull_requests, "pull requests")
 
+        # Analyze total contributions
+        total_contributions_analysis = self._analyze_trend(total_contributions, "total contributions")
+
         # Generate overall analysis
         if self.is_japanese:
             # Japanese analysis text
             analysis["commits"] = f"コミット分析: 期間中に合計 {commits_count} 件のコミットがありました。{commit_analysis['ja']}"
             analysis["pull_requests"] = f"プルリクエスト分析: 期間中に合計 {prs_count} 件のプルリクエストがありました。{pr_analysis['ja']}"
+            analysis["total_contributions"] = f"総貢献分析: 期間中に合計 {total_contributions_count} 件の貢献がありました。{total_contributions_analysis['ja']} 貢献数はあなたの活動の総合的な指標であり、コミット、プルリクエスト、イシュー、レビューの合計を表しています。"
 
             # Overall period analysis
             period_analysis = ""
@@ -356,6 +377,7 @@ class HTMLReporter:
             # English analysis text
             analysis["commits"] = f"Commit Analysis: A total of {commits_count} commits were made during this period. {commit_analysis['en']}"
             analysis["pull_requests"] = f"Pull Request Analysis: A total of {prs_count} pull requests were created during this period. {pr_analysis['en']}"
+            analysis["total_contributions"] = f"Total Contributions Analysis: A total of {total_contributions_count} contributions were made during this period. {total_contributions_analysis['en']} The contribution count is a comprehensive metric of your activity, representing the sum of commits, pull requests, issues, and reviews."
 
             # Overall period analysis
             period_analysis = ""
@@ -487,6 +509,12 @@ class HTMLReporter:
         # Create Plotly chart data if aggregated data exists
         plotly_data = {}
         if "aggregated" in user_data:
+            if user_data["aggregated"].get("total_contributions"):
+                plotly_data["total_contributions"] = self._create_bar_chart_data(
+                    user_data["aggregated"]["total_contributions"], 
+                    "Total Contributions Over Time"
+                )
+
             if user_data["aggregated"].get("commits"):
                 plotly_data["commits"] = self._create_bar_chart_data(
                     user_data["aggregated"]["commits"], 
