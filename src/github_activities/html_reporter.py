@@ -11,8 +11,6 @@ from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Tuple
 
 import jinja2
-import plotly.graph_objects as go
-from plotly.utils import PlotlyJSONEncoder
 
 
 class HTMLReporter:
@@ -30,224 +28,375 @@ class HTMLReporter:
         # Create Jinja2 environment with template
         self.template = """
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{% if jp_week_format %}ja{% else %}en{% endif %}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GitHub Activity Report for {{ user.login }}</title>
-    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <title>GitHub Activity Dashboard - {{ user.login }}</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <style>
-        body {
-            font-family: Arial, sans-serif;
+        * {
             margin: 0;
-            padding: 20px;
-            color: #333;
-            background-color: #f8f9fa;
+            padding: 0;
+            box-sizing: border-box;
         }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #f8f9fa;
+            color: #333;
+            line-height: 1.6;
+        }
+
         .container {
             max-width: 1200px;
             margin: 0 auto;
-            background-color: white;
             padding: 20px;
-            border-radius: 5px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
         }
+
         .header {
+            background: white;
+            border-radius: 8px;
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
             display: flex;
             align-items: center;
-            margin-bottom: 20px;
-            border-bottom: 1px solid #eee;
-            padding-bottom: 20px;
+            gap: 20px;
         }
+
         .avatar {
-            width: 100px;
-            height: 100px;
+            width: 80px;
+            height: 80px;
             border-radius: 50%;
-            margin-right: 20px;
+            border: 3px solid #e9ecef;
         }
-        .user-info {
-            flex-grow: 1;
-        }
+
         .user-info h1 {
-            margin: 0 0 10px 0;
+            font-size: 28px;
+            margin-bottom: 8px;
+            color: #2c3e50;
         }
-        .user-info p {
-            margin: 5px 0;
-            color: #666;
-        }
-        .summary-box {
+
+        .user-meta {
             display: flex;
+            gap: 16px;
+            font-size: 14px;
+            color: #6c757d;
             flex-wrap: wrap;
-            margin-bottom: 30px;
         }
-        .summary-item {
-            flex: 1;
-            min-width: 150px;
-            background-color: #f8f9fa;
-            border-radius: 5px;
-            padding: 15px;
-            margin: 5px;
-            text-align: center;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+
+        .period-info {
+            margin-left: auto;
+            text-align: right;
+            padding: 12px 16px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            border-left: 4px solid #007bff;
         }
-        .summary-item h3 {
-            margin: 0 0 10px 0;
-            color: #555;
+
+        .period-info h3 {
+            font-size: 14px;
+            color: #6c757d;
+            margin-bottom: 4px;
         }
-        .summary-item p {
-            font-size: 24px;
-            font-weight: bold;
-            margin: 0;
-            color: #007bff;
+
+        .period-info p {
+            font-size: 16px;
+            font-weight: 600;
+            color: #2c3e50;
         }
-        .chart-container {
-            margin-bottom: 30px;
-            background-color: white;
-            border-radius: 5px;
-            padding: 15px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+            margin-bottom: 32px;
         }
+
+        .stat-card {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            transition: box-shadow 0.2s ease;
+        }
+
+        .stat-card:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+        }
+
+        .stat-header {
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .stat-title {
+            font-size: 14px;
+            color: #6c757d;
+            font-weight: 500;
+        }
+
+        .stat-value {
+            font-size: 32px;
+            font-weight: 700;
+            color: #2c3e50;
+            margin-bottom: 4px;
+        }
+
+        .stat-subtitle {
+            font-size: 12px;
+            color: #868e96;
+        }
+
+        .analysis-section {
+            background: white;
+            border-radius: 8px;
+            padding: 24px;
+            margin-bottom: 32px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+
+        .analysis-section h2 {
+            color: #2c3e50;
+            margin-bottom: 16px;
+            font-size: 20px;
+        }
+
+        .analysis-content p {
+            margin-bottom: 12px;
+            color: #495057;
+        }
+
+        .analysis-content h3 {
+            color: #343a40;
+            margin: 16px 0 8px 0;
+            font-size: 16px;
+        }
+
+        .charts-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            margin-bottom: 32px;
+        }
+
+        .chart-card {
+            background: white;
+            border-radius: 8px;
+            padding: 24px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            width: 100%;
+            overflow: hidden;
+        }
+
         .chart-title {
-            margin-top: 0;
-            color: #333;
-            border-bottom: 1px solid #eee;
-            padding-bottom: 10px;
+            font-size: 18px;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 20px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #e9ecef;
         }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+            width: 100%;
+            overflow: hidden;
+        }
+
+        .trends-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 20px;
+        }
+
+        .trend-chart {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+
+        .trend-chart h3 {
+            font-size: 16px;
+            color: #2c3e50;
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .trend-chart-container {
+            height: 250px;
+        }
+
         .footer {
             text-align: center;
-            margin-top: 30px;
-            padding-top: 20px;
-            border-top: 1px solid #eee;
-            color: #777;
+            margin-top: 32px;
+            color: #6c757d;
             font-size: 14px;
         }
+
         @media (max-width: 768px) {
-            .summary-box {
+            .header {
                 flex-direction: column;
+                text-align: center;
             }
-            .summary-item {
-                margin-bottom: 10px;
+
+            .period-info {
+                margin-left: 0;
+                text-align: center;
+            }
+
+            .charts-section {
+                grid-template-columns: 1fr;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
             }
         }
     </style>
 </head>
 <body>
     <div class="container">
+        <!-- Header Section -->
         <div class="header">
             <img src="{{ user.avatar_url }}" alt="{{ user.login }}" class="avatar">
             <div class="user-info">
                 <h1>{{ user.name or user.login }}</h1>
-                <p>GitHub Username: <a href="{{ user.html_url }}" target="_blank">{{ user.login }}</a></p>
-                <p>Public Repositories: {{ user.public_repos }}</p>
-                <p>Followers: {{ user.followers }} | Following: {{ user.following }}</p>
-                <p>Account Created: {{ user.created_at[:10] }}</p>
+                <div class="user-meta">
+                    <span>📁 {{ user.public_repos }} repositories</span>
+                    <span>👥 {{ user.followers }} followers</span>
+                    <span>📅 Since {{ user.created_at[:7] }}</span>
+                </div>
+            </div>
+            <div class="period-info">
+                <h3>{% if jp_week_format %}Activity Period{% else %}Activity Period{% endif %}</h3>
+                <p>{{ activity_period.since[:10] }} 〜 {{ activity_period.until[:10] }}</p>
             </div>
         </div>
 
-        <h2>Activity Summary ({{ activity_period.since[:10] }} to {{ activity_period.until[:10] }})</h2>
+        <!-- Stats Overview -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-title">Total Contributions</div>
+                <div class="stat-value">{{ summary.total_contributions }}</div>
+                <div class="stat-subtitle">{% if jp_week_format %}全活動の合計{% else %}Sum of all activities{% endif %}</div>
+            </div>
 
-        <div class="summary-box">
-            <div class="summary-item">
-                <h3>Commits</h3>
-                <p>{{ summary.commits_count }}</p>
+            <div class="stat-card">
+                <div class="stat-title">Total Commits</div>
+                <div class="stat-value">{{ summary.commits_count }}</div>
+                <div class="stat-subtitle">{% if jp_week_format %}過去30日間{% else %}Last 30 days{% endif %}</div>
             </div>
-            <div class="summary-item">
-                <h3>Pull Requests</h3>
-                <p>{{ summary.pull_requests_count }}</p>
+
+            <div class="stat-card">
+                <div class="stat-title">Pull Requests</div>
+                <div class="stat-value">{{ summary.pull_requests_count }}</div>
+                <div class="stat-subtitle">{% if jp_week_format %}平均 {{ (summary.pull_requests_count / 4)|round(1) }}/週{% else %}Avg {{ (summary.pull_requests_count / 4)|round(1) }}/week{% endif %}</div>
             </div>
-            <div class="summary-item">
-                <h3>Issues</h3>
-                <p>{{ summary.issues_count }}</p>
-            </div>
-            <div class="summary-item">
-                <h3>Reviews</h3>
-                <p>{{ summary.reviews_count }}</p>
-            </div>
-            <div class="summary-item">
-                <h3>Total Contributions</h3>
-                <p>{{ summary.total_contributions }}</p>
-            </div>
+
             {% if summary.code_changes %}
-            <div class="summary-item">
-                <h3>Code Changes</h3>
-                <p>{{ summary.code_changes.total }}</p>
-                <small>+{{ summary.code_changes.additions }} / -{{ summary.code_changes.deletions }}</small>
+            <div class="stat-card">
+                <div class="stat-title">Code Changes</div>
+                <div class="stat-value">{{ (summary.code_changes.total / 1000)|round(1) }}k</div>
+                <div class="stat-subtitle">+{{ (summary.code_changes.additions / 1000)|round(1) }}k / -{{ (summary.code_changes.deletions / 1000)|round(1) }}k</div>
             </div>
             {% endif %}
+
+            <div class="stat-card">
+                <div class="stat-title">Issues</div>
+                <div class="stat-value">{{ summary.issues_count }}</div>
+                <div class="stat-subtitle">{% if jp_week_format %}課題管理{% else %}Issue management{% endif %}</div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-title">Code Reviews</div>
+                <div class="stat-value">{{ summary.reviews_count }}</div>
+                <div class="stat-subtitle">{% if jp_week_format %}レビュー参加{% else %}Review participation{% endif %}</div>
+            </div>
         </div>
 
         {% if analysis %}
-        <div class="analysis-section" style="margin-bottom: 30px; background-color: white; border-radius: 5px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-            {% if jp_week_format %}
-            <h2>活動分析</h2>
-            <div class="analysis-content" style="margin-top: 15px;">
+        <div class="analysis-section">
+            <h2>{% if jp_week_format %}活動分析{% else %}Activity Analysis{% endif %}</h2>
+            <div class="analysis-content">
                 <p><strong>{{ analysis.period }}</strong></p>
-                <h3>総貢献</h3>
-                <p>{{ analysis.total_contributions }}</p>
+                {% if jp_week_format %}
                 <h3>コミット</h3>
                 <p>{{ analysis.commits }}</p>
                 <h3>プルリクエスト</h3>
                 <p>{{ analysis.pull_requests }}</p>
-            </div>
-            {% else %}
-            <h2>Activity Analysis</h2>
-            <div class="analysis-content" style="margin-top: 15px;">
-                <p><strong>{{ analysis.period }}</strong></p>
-                <h3>Total Contributions</h3>
-                <p>{{ analysis.total_contributions }}</p>
+                {% else %}
                 <h3>Commits</h3>
                 <p>{{ analysis.commits }}</p>
                 <h3>Pull Requests</h3>
                 <p>{{ analysis.pull_requests }}</p>
+                {% endif %}
             </div>
-            {% endif %}
         </div>
         {% endif %}
 
         {% if aggregated %}
-        <h2>Activity Trends</h2>
+        <!-- Main Charts Section -->
+        <div class="charts-section">
+            <div class="chart-card">
+                <h3 class="chart-title">{% if jp_week_format %}活動トレンド推移{% else %}Activity Trend{% endif %}</h3>
+                <div class="chart-container">
+                    <canvas id="trendChart"></canvas>
+                </div>
+            </div>
 
-        {% if aggregated.total_contributions %}
-        <div class="chart-container">
-            <h3 class="chart-title">Total Contributions Over Time</h3>
-            <div id="total-contributions-chart"></div>
+            <div class="chart-card">
+                <h3 class="chart-title">{% if jp_week_format %}活動内訳{% else %}Activity Breakdown{% endif %}</h3>
+                <div class="chart-container">
+                    <canvas id="pieChart"></canvas>
+                </div>
+            </div>
         </div>
-        {% endif %}
 
-        {% if aggregated.commits %}
-        <div class="chart-container">
-            <h3 class="chart-title">Commits Over Time</h3>
-            <div id="commits-chart"></div>
-        </div>
-        {% endif %}
+        <!-- Individual Trend Charts -->
+        <div class="trends-grid">
+            {% if aggregated.commits %}
+            <div class="trend-chart">
+                <h3>Commits</h3>
+                <div class="trend-chart-container">
+                    <canvas id="commitsChart"></canvas>
+                </div>
+            </div>
+            {% endif %}
 
-        {% if aggregated.pull_requests %}
-        <div class="chart-container">
-            <h3 class="chart-title">Pull Requests Over Time</h3>
-            <div id="prs-chart"></div>
-        </div>
-        {% endif %}
+            {% if aggregated.pull_requests %}
+            <div class="trend-chart">
+                <h3>Pull Requests</h3>
+                <div class="trend-chart-container">
+                    <canvas id="prsChart"></canvas>
+                </div>
+            </div>
+            {% endif %}
 
-        {% if aggregated.issues %}
-        <div class="chart-container">
-            <h3 class="chart-title">Issues Over Time</h3>
-            <div id="issues-chart"></div>
-        </div>
-        {% endif %}
+            {% if aggregated.code_changes %}
+            <div class="trend-chart">
+                <h3>Code Changes</h3>
+                <div class="trend-chart-container">
+                    <canvas id="codeChangesChart"></canvas>
+                </div>
+            </div>
+            {% endif %}
 
-        {% if aggregated.reviews %}
-        <div class="chart-container">
-            <h3 class="chart-title">Reviews Over Time</h3>
-            <div id="reviews-chart"></div>
+            {% if aggregated.reviews %}
+            <div class="trend-chart">
+                <h3>Code Reviews</h3>
+                <div class="trend-chart-container">
+                    <canvas id="reviewsChart"></canvas>
+                </div>
+            </div>
+            {% endif %}
         </div>
-        {% endif %}
-
-        {% if aggregated.code_changes %}
-        <div class="chart-container">
-            <h3 class="chart-title">Code Changes Over Time</h3>
-            <div id="code-changes-chart"></div>
-        </div>
-        {% endif %}
         {% endif %}
 
         <div class="footer">
@@ -257,31 +406,150 @@ class HTMLReporter:
 
     {% if aggregated %}
     <script>
-        // Plotly chart data
-        var plotlyData = {{ plotly_data|safe }};
+        // Data for charts
+        const data = {
+            periods: [{% for period in aggregated.total_contributions %}"{{ period[0] }}"{% if not loop.last %}, {% endif %}{% endfor %}],
+            totalContributions: [{% for period in aggregated.total_contributions %}{{ period[1] }}{% if not loop.last %}, {% endif %}{% endfor %}],
+            commits: [{% for period in aggregated.commits %}{{ period[1] }}{% if not loop.last %}, {% endif %}{% endfor %}],
+            pullRequests: [{% for period in aggregated.pull_requests %}{{ period[1] }}{% if not loop.last %}, {% endif %}{% endfor %}],
+            {% if aggregated.issues %}
+            issues: [{% for period in aggregated.issues %}{{ period[1] }}{% if not loop.last %}, {% endif %}{% endfor %}],
+            {% endif %}
+            {% if aggregated.reviews %}
+            reviews: [{% for period in aggregated.reviews %}{{ period[1] }}{% if not loop.last %}, {% endif %}{% endfor %}],
+            {% endif %}
+            {% if aggregated.code_changes %}
+            codeChanges: [{% for period in aggregated.code_changes %}{{ period[1] }}{% if not loop.last %}, {% endif %}{% endfor %}]
+            {% endif %}
+        };
 
-        {% if aggregated.total_contributions %}
-        Plotly.newPlot('total-contributions-chart', plotlyData.total_contributions.data, plotlyData.total_contributions.layout);
-        {% endif %}
+        // Common chart options
+        const commonOptions = {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: {
+                        color: 'rgba(0,0,0,0.05)'
+                    },
+                    ticks: {
+                        color: '#6c757d'
+                    }
+                },
+                x: {
+                    grid: {
+                        color: 'rgba(0,0,0,0.05)'
+                    },
+                    ticks: {
+                        color: '#6c757d'
+                    }
+                }
+            }
+        };
 
+        // Main trend chart
+        const trendCtx = document.getElementById('trendChart').getContext('2d');
+        new Chart(trendCtx, {
+            type: 'line',
+            data: {
+                labels: data.periods.map(p => p.slice(5)),
+                datasets: [{
+                    label: 'Total Contributions',
+                    data: data.totalContributions,
+                    borderColor: '#007bff',
+                    backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.4,
+                    pointBackgroundColor: '#007bff',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2,
+                    pointRadius: 5
+                }]
+            },
+            options: {
+                ...commonOptions,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top'
+                    }
+                }
+            }
+        });
+
+        // Activity breakdown pie chart
+        const pieCtx = document.getElementById('pieChart').getContext('2d');
+        new Chart(pieCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Commits', 'Pull Requests', 'Reviews', 'Issues'],
+                datasets: [{
+                    data: [{{ summary.commits_count }}, {{ summary.pull_requests_count }}, {{ summary.reviews_count }}, {{ summary.issues_count }}],
+                    backgroundColor: [
+                        '#007bff',
+                        '#28a745',
+                        '#ffc107',
+                        '#dc3545'
+                    ],
+                    borderWidth: 0,
+                    cutout: '60%'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            padding: 20,
+                            usePointStyle: true,
+                            font: {
+                                size: 12
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        // Individual trend charts
+        function createTrendChart(canvasId, chartData, color, label) {
+            const ctx = document.getElementById(canvasId).getContext('2d');
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: data.periods.map(p => p.slice(5)),
+                    datasets: [{
+                        label: label,
+                        data: chartData,
+                        backgroundColor: color,
+                        borderRadius: 4
+                    }]
+                },
+                options: commonOptions
+            });
+        }
+
+        // Create individual charts
         {% if aggregated.commits %}
-        Plotly.newPlot('commits-chart', plotlyData.commits.data, plotlyData.commits.layout);
+        createTrendChart('commitsChart', data.commits, '#007bff', 'Commits');
         {% endif %}
-
         {% if aggregated.pull_requests %}
-        Plotly.newPlot('prs-chart', plotlyData.pull_requests.data, plotlyData.pull_requests.layout);
+        createTrendChart('prsChart', data.pullRequests, '#28a745', 'Pull Requests');
         {% endif %}
-
-        {% if aggregated.issues %}
-        Plotly.newPlot('issues-chart', plotlyData.issues.data, plotlyData.issues.layout);
-        {% endif %}
-
         {% if aggregated.reviews %}
-        Plotly.newPlot('reviews-chart', plotlyData.reviews.data, plotlyData.reviews.layout);
+        createTrendChart('reviewsChart', data.reviews, '#ffc107', 'Reviews');
         {% endif %}
-
         {% if aggregated.code_changes %}
-        Plotly.newPlot('code-changes-chart', plotlyData.code_changes.data, plotlyData.code_changes.layout);
+        createTrendChart('codeChangesChart', data.codeChanges, '#dc3545', 'Code Changes');
         {% endif %}
     </script>
     {% endif %}
@@ -452,48 +720,7 @@ class HTMLReporter:
             'ja': ja_text
         }
 
-    def _create_bar_chart_data(self, data, title):
-        """
-        Create Plotly bar chart data.
-
-        Args:
-            data: List of tuples with (period, count)
-            title: Chart title
-
-        Returns:
-            Dictionary with Plotly chart data and layout
-        """
-        if not data:
-            return None
-
-        periods = []
-        for item in data:
-            period = item[0]
-            # If jp_week_format is enabled and the period is a week, convert it to Japanese-style notation
-            if self.jp_week_format and '-W' in period:
-                period = self._convert_week_to_jp_format(period)
-            periods.append(period)
-
-        counts = [item[1] for item in data]
-
-        chart_data = {
-            'data': [
-                go.Bar(
-                    x=periods,
-                    y=counts,
-                    marker_color='#007bff'
-                )
-            ],
-            'layout': go.Layout(
-                title=title,
-                xaxis=dict(title='Period'),
-                yaxis=dict(title='Count'),
-                margin=dict(l=50, r=50, t=50, b=50),
-                height=400
-            )
-        }
-
-        return chart_data
+    # The _create_bar_chart_data method has been removed as we're now using Chart.js
 
     def generate_html_report(self, user_data: Dict, output_path: Optional[str] = None) -> str:
         """
@@ -506,44 +733,7 @@ class HTMLReporter:
         Returns:
             Path to the generated HTML report
         """
-        # Create Plotly chart data if aggregated data exists
-        plotly_data = {}
-        if "aggregated" in user_data:
-            if user_data["aggregated"].get("total_contributions"):
-                plotly_data["total_contributions"] = self._create_bar_chart_data(
-                    user_data["aggregated"]["total_contributions"], 
-                    "Total Contributions Over Time"
-                )
-
-            if user_data["aggregated"].get("commits"):
-                plotly_data["commits"] = self._create_bar_chart_data(
-                    user_data["aggregated"]["commits"], 
-                    "Commits Over Time"
-                )
-
-            if user_data["aggregated"].get("pull_requests"):
-                plotly_data["pull_requests"] = self._create_bar_chart_data(
-                    user_data["aggregated"]["pull_requests"], 
-                    "Pull Requests Over Time"
-                )
-
-            if user_data["aggregated"].get("issues"):
-                plotly_data["issues"] = self._create_bar_chart_data(
-                    user_data["aggregated"]["issues"], 
-                    "Issues Over Time"
-                )
-
-            if user_data["aggregated"].get("reviews"):
-                plotly_data["reviews"] = self._create_bar_chart_data(
-                    user_data["aggregated"]["reviews"], 
-                    "Reviews Over Time"
-                )
-
-            if user_data["aggregated"].get("code_changes"):
-                plotly_data["code_changes"] = self._create_bar_chart_data(
-                    user_data["aggregated"]["code_changes"], 
-                    "Code Changes Over Time"
-                )
+        # No need to create Plotly chart data anymore as we're using Chart.js
 
         # Generate activity analysis if aggregated data exists
         analysis = None
@@ -559,7 +749,6 @@ class HTMLReporter:
             aggregated=user_data.get("aggregated", {}),
             analysis=analysis,
             jp_week_format=self.jp_week_format,
-            plotly_data=json.dumps(plotly_data, cls=PlotlyJSONEncoder),
             generation_date=datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         )
 
