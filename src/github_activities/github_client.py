@@ -18,6 +18,11 @@ from github.GithubException import GithubException
 logger = logging.getLogger(__name__)
 
 
+class CommitList(list):
+    """A list subclass that can have attributes set on it."""
+    pass
+
+
 class GitHubClient:
     """Client for interacting with the GitHub API."""
 
@@ -95,7 +100,9 @@ class GitHubClient:
         query = f"author:{username} committer-date:{since.strftime('%Y-%m-%d')}..{until.strftime('%Y-%m-%d')}"
         if repository:
             query += f" repo:{repository}"
-        commits = []
+        commits = CommitList()
+        total_additions = 0
+        total_deletions = 0
 
         try:
             search_result = self.github.search_commits(query=query)
@@ -104,17 +111,43 @@ class GitHubClient:
                 # URL format: https://github.com/owner/repo/commit/sha
                 repo_name = "/".join(commit.html_url.split("/")[3:5]) if commit.html_url else "Unknown"
 
+                # Get detailed commit data to retrieve additions and deletions
+                try:
+                    # Get the repository object
+                    repo = self.github.get_repo(repo_name)
+                    # Get the detailed commit data
+                    detailed_commit = repo.get_commit(commit.sha)
+                    additions = detailed_commit.stats.additions
+                    deletions = detailed_commit.stats.deletions
+                    total_additions += additions
+                    total_deletions += deletions
+                except GithubException as e:
+                    logger.warning(f"Could not get detailed stats for commit {commit.sha}: {e}")
+                    additions = 0
+                    deletions = 0
+
                 commits.append({
                     "sha": commit.sha,
                     "message": commit.commit.message,
                     "date": commit.commit.author.date.isoformat(),
                     "repository": repo_name,
-                    "url": commit.html_url
+                    "url": commit.html_url,
+                    "additions": additions,
+                    "deletions": deletions
                 })
+
+            # Store the total additions and deletions as attributes of the list
+            # This will be used later in get_user_activity_summary
+            commits.total_additions = total_additions
+            commits.total_deletions = total_deletions
+
             return commits
         except GithubException as e:
             logger.error(f"Error fetching commits for user {username}: {e}")
-            return []
+            empty_commits = CommitList()
+            empty_commits.total_additions = 0
+            empty_commits.total_deletions = 0
+            return empty_commits
 
     def get_user_pull_requests(self, username: str, state: str = "all",
                               since: Optional[datetime] = None,
@@ -268,7 +301,7 @@ class GitHubClient:
             logger.error(f"Error fetching reviews for user {username}: {e}")
             return []
 
-    def _aggregate_by_period(self, data, period_type, since=None, until=None):
+    def _aggregate_by_period(self, data, period_type, since=None, until=None, metric_type=None):
         """
         Aggregate data by week or month.
 
@@ -277,6 +310,7 @@ class GitHubClient:
             period_type: 'week' or 'month'.
             since: Start date for activity search.
             until: End date for activity search.
+            metric_type: Type of metric to aggregate (e.g., 'additions', 'deletions').
 
         Returns:
             Dictionary with aggregated data by period.
@@ -302,8 +336,22 @@ class GitHubClient:
                 period_key = date.strftime(date_format)
 
                 if period_key not in aggregated:
-                    aggregated[period_key] = 0
-                aggregated[period_key] += 1
+                    if metric_type:
+                        # For code changes metrics, initialize with a dictionary
+                        aggregated[period_key] = {metric_type: 0, 'count': 0}
+                    else:
+                        aggregated[period_key] = 0
+
+                if metric_type and metric_type in item:
+                    # Aggregate the specific metric (e.g., additions, deletions)
+                    aggregated[period_key][metric_type] += item[metric_type]
+                    aggregated[period_key]['count'] += 1
+                else:
+                    # Default behavior: count items
+                    if isinstance(aggregated[period_key], dict):
+                        aggregated[period_key]['count'] += 1
+                    else:
+                        aggregated[period_key] += 1
             except (ValueError, TypeError):
                 continue
 
@@ -361,6 +409,10 @@ class GitHubClient:
         # Get user profile info
         user = self.get_user(username)
 
+        # Get code changes data (additions and deletions)
+        total_additions = getattr(commits, 'total_additions', 0)
+        total_deletions = getattr(commits, 'total_deletions', 0)
+
         result = {
             "user": {
                 "login": user.login,
@@ -382,7 +434,12 @@ class GitHubClient:
                 "pull_requests_count": len(pull_requests),
                 "issues_count": len(issues),
                 "reviews_count": len(reviews),
-                "total_contributions": len(commits) + len(pull_requests) + len(issues) + len(reviews)
+                "total_contributions": len(commits) + len(pull_requests) + len(issues) + len(reviews),
+                "code_changes": {
+                    "additions": total_additions,
+                    "deletions": total_deletions,
+                    "total": total_additions + total_deletions
+                }
             },
             "details": {
                 "commits": commits[:5],  # Just include the first 5 for brevity
@@ -400,5 +457,32 @@ class GitHubClient:
                 "issues": self._aggregate_by_period(issues, aggregation, since, until),
                 "reviews": self._aggregate_by_period(reviews, aggregation, since, until)
             }
+
+            # Add aggregated code changes data
+            additions_by_period = self._aggregate_by_period(commits, aggregation, since, until, 'additions')
+            deletions_by_period = self._aggregate_by_period(commits, aggregation, since, until, 'deletions')
+
+            # Convert the lists of tuples to dictionaries for easier lookup
+            additions_dict = {period: value for period, value in additions_by_period}
+            deletions_dict = {period: value for period, value in deletions_by_period}
+
+            # Get all unique periods
+            all_periods = set(additions_dict.keys()) | set(deletions_dict.keys())
+
+            # Create the code changes by period list
+            code_changes_by_period = []
+            for period in sorted(all_periods):
+                # Get additions and deletions for this period, defaulting to 0 if not found
+                # When metric_type is provided, the value is a dictionary with the metric type as a key
+                additions_dict_value = additions_dict.get(period, {})
+                deletions_dict_value = deletions_dict.get(period, {})
+
+                # Extract the actual additions and deletions values
+                additions = additions_dict_value.get('additions', 0) if isinstance(additions_dict_value, dict) else 0
+                deletions = deletions_dict_value.get('deletions', 0) if isinstance(deletions_dict_value, dict) else 0
+
+                code_changes_by_period.append((period, additions + deletions))
+
+            result["aggregated"]["code_changes"] = code_changes_by_period
 
         return result

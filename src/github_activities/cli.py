@@ -64,6 +64,13 @@ def display_activity_summary(user_data):
     table.add_row("Reviews", str(summary["reviews_count"]))
     table.add_row("Total Contributions", str(summary["total_contributions"]))
 
+    # Add code changes if available
+    if "code_changes" in summary:
+        code_changes = summary["code_changes"]
+        table.add_row("Code Additions", str(code_changes["additions"]))
+        table.add_row("Code Deletions", str(code_changes["deletions"]))
+        table.add_row("Total Code Changes", str(code_changes["total"]))
+
     console.print(table)
 
 
@@ -115,6 +122,17 @@ def display_aggregated_activity(user_data, aggregation):
             review_table.add_row(period, str(count))
 
         console.print(review_table)
+
+    # Display aggregated code changes
+    if "code_changes" in aggregated and aggregated["code_changes"]:
+        code_changes_table = Table(title=f"Code Changes by {period_name}")
+        code_changes_table.add_column(period_name, style="cyan")
+        code_changes_table.add_column("Changes", style="green")
+
+        for period, count in aggregated["code_changes"]:
+            code_changes_table.add_row(period, str(count))
+
+        console.print(code_changes_table)
 
 
 def display_recent_activity(user_data):

@@ -8,7 +8,7 @@ charts for GitHub activity data.
 import os
 import json
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 import jinja2
 import plotly.graph_objects as go
@@ -26,6 +26,7 @@ class HTMLReporter:
             jp_week_format: Whether to use Japanese-style week notation (showing start date).
         """
         self.jp_week_format = jp_week_format
+        self.is_japanese = jp_week_format  # Use jp_week_format as a proxy for Japanese language preference
         # Create Jinja2 environment with template
         self.template = """
 <!DOCTYPE html>
@@ -166,7 +167,38 @@ class HTMLReporter:
                 <h3>Total Contributions</h3>
                 <p>{{ summary.total_contributions }}</p>
             </div>
+            {% if summary.code_changes %}
+            <div class="summary-item">
+                <h3>Code Changes</h3>
+                <p>{{ summary.code_changes.total }}</p>
+                <small>+{{ summary.code_changes.additions }} / -{{ summary.code_changes.deletions }}</small>
+            </div>
+            {% endif %}
         </div>
+
+        {% if analysis %}
+        <div class="analysis-section" style="margin-bottom: 30px; background-color: white; border-radius: 5px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+            {% if jp_week_format %}
+            <h2>活動分析</h2>
+            <div class="analysis-content" style="margin-top: 15px;">
+                <p><strong>{{ analysis.period }}</strong></p>
+                <h3>コミット</h3>
+                <p>{{ analysis.commits }}</p>
+                <h3>プルリクエスト</h3>
+                <p>{{ analysis.pull_requests }}</p>
+            </div>
+            {% else %}
+            <h2>Activity Analysis</h2>
+            <div class="analysis-content" style="margin-top: 15px;">
+                <p><strong>{{ analysis.period }}</strong></p>
+                <h3>Commits</h3>
+                <p>{{ analysis.commits }}</p>
+                <h3>Pull Requests</h3>
+                <p>{{ analysis.pull_requests }}</p>
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
 
         {% if aggregated %}
         <h2>Activity Trends</h2>
@@ -198,6 +230,13 @@ class HTMLReporter:
             <div id="reviews-chart"></div>
         </div>
         {% endif %}
+
+        {% if aggregated.code_changes %}
+        <div class="chart-container">
+            <h3 class="chart-title">Code Changes Over Time</h3>
+            <div id="code-changes-chart"></div>
+        </div>
+        {% endif %}
         {% endif %}
 
         <div class="footer">
@@ -224,6 +263,10 @@ class HTMLReporter:
 
         {% if aggregated.reviews %}
         Plotly.newPlot('reviews-chart', plotlyData.reviews.data, plotlyData.reviews.layout);
+        {% endif %}
+
+        {% if aggregated.code_changes %}
+        Plotly.newPlot('code-changes-chart', plotlyData.code_changes.data, plotlyData.code_changes.layout);
         {% endif %}
     </script>
     {% endif %}
@@ -262,6 +305,130 @@ class HTMLReporter:
         except (ValueError, TypeError):
             # If there's any error, return the original string
             return week_str
+
+    def _generate_activity_analysis(self, user_data):
+        """
+        Generate analysis text based on activity data.
+
+        Args:
+            user_data: Dictionary with user activity data
+
+        Returns:
+            Dictionary with analysis text for different aspects
+        """
+        analysis = {}
+
+        # Get aggregated data
+        aggregated = user_data.get("aggregated", {})
+        commits = aggregated.get("commits", [])
+        pull_requests = aggregated.get("pull_requests", [])
+
+        # Get summary data
+        summary = user_data.get("summary", {})
+        commits_count = summary.get("commits_count", 0)
+        prs_count = summary.get("pull_requests_count", 0)
+
+        # Analyze commits
+        commit_analysis = self._analyze_trend(commits, "commits")
+
+        # Analyze pull requests
+        pr_analysis = self._analyze_trend(pull_requests, "pull requests")
+
+        # Generate overall analysis
+        if self.is_japanese:
+            # Japanese analysis text
+            analysis["commits"] = f"コミット分析: 期間中に合計 {commits_count} 件のコミットがありました。{commit_analysis['ja']}"
+            analysis["pull_requests"] = f"プルリクエスト分析: 期間中に合計 {prs_count} 件のプルリクエストがありました。{pr_analysis['ja']}"
+
+            # Overall period analysis
+            period_analysis = ""
+            if commit_analysis['trend'] == "increasing" and pr_analysis['trend'] == "increasing":
+                period_analysis = "コミットとプルリクエストの両方が増加傾向にあり、活発な開発活動が行われています。"
+            elif commit_analysis['trend'] == "decreasing" and pr_analysis['trend'] == "decreasing":
+                period_analysis = "コミットとプルリクエストの両方が減少傾向にあります。プロジェクトが安定期に入ったか、活動が低下している可能性があります。"
+            elif commit_analysis['trend'] == "stable" and pr_analysis['trend'] == "stable":
+                period_analysis = "コミットとプルリクエストの活動は安定しています。一定のペースで開発が継続されています。"
+            else:
+                period_analysis = "コミットとプルリクエストの活動にはばらつきがあります。プロジェクトの異なるフェーズや、特定のタスクへの集中が見られます。"
+
+            analysis["period"] = period_analysis
+        else:
+            # English analysis text
+            analysis["commits"] = f"Commit Analysis: A total of {commits_count} commits were made during this period. {commit_analysis['en']}"
+            analysis["pull_requests"] = f"Pull Request Analysis: A total of {prs_count} pull requests were created during this period. {pr_analysis['en']}"
+
+            # Overall period analysis
+            period_analysis = ""
+            if commit_analysis['trend'] == "increasing" and pr_analysis['trend'] == "increasing":
+                period_analysis = "Both commits and pull requests show an increasing trend, indicating active development."
+            elif commit_analysis['trend'] == "decreasing" and pr_analysis['trend'] == "decreasing":
+                period_analysis = "Both commits and pull requests show a decreasing trend. This might indicate the project is stabilizing or activity is slowing down."
+            elif commit_analysis['trend'] == "stable" and pr_analysis['trend'] == "stable":
+                period_analysis = "Commit and pull request activity is stable, showing consistent development pace."
+            else:
+                period_analysis = "There is variability in commit and pull request activity, which might indicate different project phases or focus on specific tasks."
+
+            analysis["period"] = period_analysis
+
+        return analysis
+
+    def _analyze_trend(self, data, activity_type):
+        """
+        Analyze trend in activity data.
+
+        Args:
+            data: List of tuples with (period, count)
+            activity_type: Type of activity (e.g., "commits", "pull requests")
+
+        Returns:
+            Dictionary with trend analysis
+        """
+        if not data or len(data) < 2:
+            return {
+                'trend': "insufficient_data",
+                'en': f"Not enough data to analyze {activity_type} trend.",
+                'ja': f"{activity_type}のトレンドを分析するのに十分なデータがありません。"
+            }
+
+        # Extract counts and calculate trend
+        counts = [item[1] for item in data]
+        first_half = counts[:len(counts)//2]
+        second_half = counts[len(counts)//2:]
+
+        first_half_avg = sum(first_half) / len(first_half) if first_half else 0
+        second_half_avg = sum(second_half) / len(second_half) if second_half else 0
+
+        # Determine trend
+        trend_threshold = 0.2  # 20% change threshold
+        percent_change = (second_half_avg - first_half_avg) / first_half_avg if first_half_avg > 0 else 0
+
+        if abs(percent_change) < trend_threshold:
+            trend = "stable"
+            en_text = f"The {activity_type} activity has been relatively stable throughout the period."
+            ja_text = f"期間を通じて{activity_type}の活動は比較的安定しています。"
+        elif percent_change > 0:
+            trend = "increasing"
+            en_text = f"There is an increasing trend in {activity_type}, with approximately {int(percent_change * 100)}% more activity in the latter half of the period."
+            ja_text = f"{activity_type}は増加傾向にあり、期間の後半では約{int(percent_change * 100)}%活動が増加しています。"
+        else:
+            trend = "decreasing"
+            en_text = f"There is a decreasing trend in {activity_type}, with approximately {int(abs(percent_change) * 100)}% less activity in the latter half of the period."
+            ja_text = f"{activity_type}は減少傾向にあり、期間の後半では約{int(abs(percent_change) * 100)}%活動が減少しています。"
+
+        # Check for peaks
+        max_count = max(counts)
+        max_index = counts.index(max_count)
+        max_period = data[max_index][0]
+
+        if max_count > second_half_avg * 1.5:
+            en_text += f" There was a notable peak in {activity_type} during {max_period}."
+            ja_text += f" {max_period}の期間中に{activity_type}の顕著なピークがありました。"
+
+        return {
+            'trend': trend,
+            'en': en_text,
+            'ja': ja_text
+        }
 
     def _create_bar_chart_data(self, data, title):
         """
@@ -344,6 +511,17 @@ class HTMLReporter:
                     "Reviews Over Time"
                 )
 
+            if user_data["aggregated"].get("code_changes"):
+                plotly_data["code_changes"] = self._create_bar_chart_data(
+                    user_data["aggregated"]["code_changes"], 
+                    "Code Changes Over Time"
+                )
+
+        # Generate activity analysis if aggregated data exists
+        analysis = None
+        if "aggregated" in user_data:
+            analysis = self._generate_activity_analysis(user_data)
+
         # Render the template
         template = jinja2.Template(self.template)
         html_content = template.render(
@@ -351,6 +529,8 @@ class HTMLReporter:
             activity_period=user_data["activity_period"],
             summary=user_data["summary"],
             aggregated=user_data.get("aggregated", {}),
+            analysis=analysis,
+            jp_week_format=self.jp_week_format,
             plotly_data=json.dumps(plotly_data, cls=PlotlyJSONEncoder),
             generation_date=datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         )
