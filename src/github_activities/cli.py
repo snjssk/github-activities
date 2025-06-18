@@ -10,7 +10,7 @@ import logging
 import os
 import sys
 from datetime import datetime, timedelta
-from typing import Optional
+from typing import List, Optional
 
 import click
 from rich.console import Console
@@ -20,6 +20,7 @@ from rich.text import Text
 
 from github_activities.github_client import GitHubClient
 from github_activities.html_reporter import HTMLReporter
+from github_activities.multi_user_reporter import MultiUserReporter
 
 # Set up logging
 logging.basicConfig(
@@ -453,6 +454,84 @@ def setup(token, config):
     except Exception as e:
         console.print(f"[bold red]Error:[/bold red] {str(e)}")
         logger.error(f"Error in setup command: {e}", exc_info=True)
+        sys.exit(1)
+
+
+@cli.command()
+@click.argument("usernames", nargs=-1, required=True)
+@click.option(
+    "--token", "-t", 
+    help="GitHub API token. If not provided, will look for it in config file."
+)
+@click.option(
+    "--config", "-c",
+    help="Path to config file. Default is 'config/config.json'."
+)
+@click.option(
+    "--days", "-d", 
+    type=int, 
+    default=365,
+    help="Number of days to look back for activity. Default is 365."
+)
+@click.option(
+    "--output", "-o",
+    help="Output file path for the comparison report."
+)
+@click.option(
+    "--aggregation", "-a",
+    type=click.Choice(["week", "month"]),
+    default="week",
+    help="Aggregate data by week or month. Default is week."
+)
+@click.option(
+    "--jp-week-format", "-j",
+    is_flag=True,
+    help="Use Japanese-style week notation (showing start date) instead of W01 format."
+)
+def compare(usernames, token, config, days, output, aggregation, jp_week_format):
+    """Compare GitHub contributions across multiple users."""
+    try:
+        # Initialize the GitHub client
+        client = GitHubClient(token=token, config_path=config)
+
+        # Calculate date range
+        until = datetime.now()
+        since = until - timedelta(days=days)
+
+        # Fetch data for each user
+        console.print(f"Fetching GitHub activity for [bold]{len(usernames)}[/bold] users...")
+        users_data = []
+
+        for username in usernames:
+            console.print(f"Processing user: [bold]{username}[/bold]")
+            user_data = client.get_user_activity_summary(username, since, until, None, aggregation)
+            users_data.append(user_data)
+
+        # Create reports directory if it doesn't exist
+        reports_dir = "reports"
+        if not os.path.exists(reports_dir):
+            os.makedirs(reports_dir)
+
+        # Generate filename with timestamp
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        if not output:
+            usernames_str = "_".join(usernames[:3])  # Use first 3 usernames in filename
+            if len(usernames) > 3:
+                usernames_str += "_and_others"
+            output = os.path.join(reports_dir, f"comparison_{usernames_str}_{timestamp}.html")
+        elif not os.path.isabs(output):
+            # If output is not an absolute path, put it in the reports directory
+            output = os.path.join(reports_dir, output)
+
+        # Initialize multi-user reporter and generate report
+        reporter = MultiUserReporter(jp_week_format=jp_week_format)
+        html_path = reporter.generate_html_report(users_data, output)
+
+        console.print(f"Comparison report exported to [bold]{html_path}[/bold]")
+
+    except Exception as e:
+        console.print(f"[bold red]Error:[/bold red] {str(e)}")
+        logger.error(f"Error in compare command: {e}", exc_info=True)
         sys.exit(1)
 
 
