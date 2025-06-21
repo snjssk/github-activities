@@ -150,6 +150,42 @@ github-activities export octocat --format html --aggregation week --output octoc
 github-activities export octocat --format html --aggregation week --jp-week-format --output octocat_jp_weekly_report.html
 ```
 
+### 複数ユーザーの貢献を比較する
+
+複数のGitHubユーザーの貢献活動を比較するHTMLレポートを生成するには：
+
+```
+github-activities compare <ユーザー名1> <ユーザー名2> [<ユーザー名3> ...]
+```
+
+オプション：
+- `--token`, `-t`: GitHubのAPIトークン
+- `--config`, `-c`: 設定ファイルのパス
+- `--days`, `-d`: アクティビティを取得する日数（デフォルトは365日）
+- `--output`, `-o`: 出力ファイルのパス（指定しない場合は`reports/comparison_<ユーザー名1>_<ユーザー名2>_..._<日付時刻>.html`）
+- `--aggregation`, `-a`: データを週単位または月単位で集計（`week`または`month`、デフォルトは`week`）
+- `--jp-week-format`, `-j`: 週番号を日本式表記（週の開始日）で表示（W01形式の代わりに）
+
+例：
+```
+github-activities compare octocat torvalds
+```
+
+3人のユーザーを比較する例：
+```
+github-activities compare octocat torvalds gvanrossum
+```
+
+月単位でデータを集計して比較する例：
+```
+github-activities compare octocat torvalds --aggregation month
+```
+
+日本式の週表記（週の開始日）を使用して比較レポートを生成する例：
+```
+github-activities compare octocat torvalds --jp-week-format
+```
+
 ## トラブルシューティング
 
 1. **認証エラー**: GitHubのAPIトークンが正しいことを確認してください。
