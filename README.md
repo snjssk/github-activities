@@ -43,6 +43,7 @@ We'll be using:
 5. Run the application: `github-activities summary <username>`
 6. Export data as JSON: `github-activities export <username> --output data.json`
 7. Generate HTML report with visualizations: `github-activities export <username> --format html --output report.html`
+8. Exclude personal repositories: `github-activities summary <username> --exclude-personal`
 
 For detailed instructions in Japanese, see [日本語ガイド](docs/README_ja.md).
 

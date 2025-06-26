@@ -71,6 +71,7 @@ github-activities summary <ユーザー名>
 - `--repository`, `-r`: 特定のリポジトリからのみデータを取得（例：`owner/repo`）。指定しない場合はすべてのリポジトリが対象
 - `--aggregation`, `-a`: データを週単位または月単位で集計（`week`または`month`）
 - `--jp-week-format`, `-j`: 週番号を日本式表記（週の開始日）で表示（W01形式の代わりに）
+- `--exclude-personal`, `-e`: ユーザー自身が所有するリポジトリ（個人リポジトリ）を除外
 
 例：
 ```
@@ -114,6 +115,7 @@ github-activities export <ユーザー名>
 - `--aggregation`, `-a`: データを週単位または月単位で集計（`week`または`month`）。HTML出力の場合、指定がなければデフォルトで`week`が使用されます
 - `--format`, `-f`: 出力形式（`json`または`html`、デフォルトは`json`）
 - `--jp-week-format`, `-j`: 週番号を日本式表記（週の開始日）で表示（W01形式の代わりに）
+- `--exclude-personal`, `-e`: ユーザー自身が所有するリポジトリ（個人リポジトリ）を除外
 
 例：
 ```
@@ -150,6 +152,11 @@ github-activities export octocat --format html --aggregation week --output octoc
 github-activities export octocat --format html --aggregation week --jp-week-format --output octocat_jp_weekly_report.html
 ```
 
+個人リポジトリを除外してHTMLレポートをエクスポートする例：
+```
+github-activities export octocat --format html --exclude-personal --output octocat_org_activity.html
+```
+
 ### 複数ユーザーの貢献を比較する
 
 複数のGitHubユーザーの貢献活動を比較するHTMLレポートを生成するには：
@@ -165,6 +172,7 @@ github-activities compare <ユーザー名1> <ユーザー名2> [<ユーザー�
 - `--output`, `-o`: 出力ファイルのパス（指定しない場合は`reports/comparison_<ユーザー名1>_<ユーザー名2>_..._<日付時刻>.html`）
 - `--aggregation`, `-a`: データを週単位または月単位で集計（`week`または`month`、デフォルトは`week`）
 - `--jp-week-format`, `-j`: 週番号を日本式表記（週の開始日）で表示（W01形式の代わりに）
+- `--exclude-personal`, `-e`: 各ユーザー自身が所有するリポジトリ（個人リポジトリ）を除外
 
 例：
 ```
@@ -184,6 +192,21 @@ github-activities compare octocat torvalds --aggregation month
 日本式の週表記（週の開始日）を使用して比較レポートを生成する例：
 ```
 github-activities compare octocat torvalds --jp-week-format
+```
+
+個人リポジトリを除外して組織のアクティビティのみを表示する例：
+```
+github-activities summary octocat --exclude-personal
+```
+
+個人リポジトリを除外してデータをエクスポートする例：
+```
+github-activities export octocat --exclude-personal --output octocat_org_activity.json
+```
+
+個人リポジトリを除外して複数ユーザーを比較する例：
+```
+github-activities compare octocat torvalds --exclude-personal
 ```
 
 ## トラブルシューティング

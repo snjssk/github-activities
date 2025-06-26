@@ -229,7 +229,12 @@ def cli():
     is_flag=True,
     help="Use Japanese-style week notation (showing start date) instead of W01 format."
 )
-def summary(username, token, config, days, repository, aggregation, jp_week_format):
+@click.option(
+    "--exclude-personal", "-e",
+    is_flag=True,
+    help="Exclude repositories owned by the user (personal repositories)."
+)
+def summary(username, token, config, days, repository, aggregation, jp_week_format, exclude_personal):
     """Display a summary of GitHub activities for a user."""
     try:
         # Initialize the GitHub client
@@ -245,7 +250,9 @@ def summary(username, token, config, days, repository, aggregation, jp_week_form
             console.print(f"Filtering by repository: [bold]{repository}[/bold]")
         if aggregation:
             console.print(f"Aggregating data by: [bold]{aggregation}[/bold]")
-        user_data = client.get_user_activity_summary(username, since, until, repository, aggregation)
+        if exclude_personal:
+            console.print(f"Excluding personal repositories owned by [bold]{username}[/bold]")
+        user_data = client.get_user_activity_summary(username, since, until, repository, aggregation, exclude_personal)
 
         # Display the data
         console.print()
@@ -318,7 +325,12 @@ def summary(username, token, config, days, repository, aggregation, jp_week_form
     is_flag=True,
     help="Use Japanese-style week notation (showing start date) instead of W01 format."
 )
-def export(username, token, config, days, output, repository, aggregation, format, jp_week_format):
+@click.option(
+    "--exclude-personal", "-e",
+    is_flag=True,
+    help="Exclude repositories owned by the user (personal repositories)."
+)
+def export(username, token, config, days, output, repository, aggregation, format, jp_week_format, exclude_personal):
     """Export GitHub activities data as JSON or HTML."""
     try:
         # Initialize the GitHub client
@@ -334,7 +346,9 @@ def export(username, token, config, days, output, repository, aggregation, forma
             console.print(f"Filtering by repository: [bold]{repository}[/bold]")
         if aggregation:
             console.print(f"Aggregating data by: [bold]{aggregation}[/bold]")
-        user_data = client.get_user_activity_summary(username, since, until, repository, aggregation)
+        if exclude_personal:
+            console.print(f"Excluding personal repositories owned by [bold]{username}[/bold]")
+        user_data = client.get_user_activity_summary(username, since, until, repository, aggregation, exclude_personal)
 
         # Determine output path and format
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
@@ -488,7 +502,12 @@ def setup(token, config):
     is_flag=True,
     help="Use Japanese-style week notation (showing start date) instead of W01 format."
 )
-def compare(usernames, token, config, days, output, aggregation, jp_week_format):
+@click.option(
+    "--exclude-personal", "-e",
+    is_flag=True,
+    help="Exclude repositories owned by each user (personal repositories)."
+)
+def compare(usernames, token, config, days, output, aggregation, jp_week_format, exclude_personal):
     """Compare GitHub contributions across multiple users."""
     try:
         # Initialize the GitHub client
@@ -500,11 +519,13 @@ def compare(usernames, token, config, days, output, aggregation, jp_week_format)
 
         # Fetch data for each user
         console.print(f"Fetching GitHub activity for [bold]{len(usernames)}[/bold] users...")
+        if exclude_personal:
+            console.print("Excluding personal repositories owned by each user")
         users_data = []
 
         for username in usernames:
             console.print(f"Processing user: [bold]{username}[/bold]")
-            user_data = client.get_user_activity_summary(username, since, until, None, aggregation)
+            user_data = client.get_user_activity_summary(username, since, until, None, aggregation, exclude_personal)
             users_data.append(user_data)
 
         # Create reports directory if it doesn't exist

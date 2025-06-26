@@ -79,7 +79,8 @@ class GitHubClient:
             raise
 
     def get_user_commits(self, username: str, since: Optional[datetime] = None, 
-                         until: Optional[datetime] = None, repository: Optional[str] = None) -> List[Dict]:
+                         until: Optional[datetime] = None, repository: Optional[str] = None,
+                         exclude_personal: bool = False) -> List[Dict]:
         """
         Get commits made by a user.
 
@@ -88,6 +89,7 @@ class GitHubClient:
             since: Start date for commit search.
             until: End date for commit search.
             repository: Repository name to filter by (e.g., "owner/repo").
+            exclude_personal: If True, exclude repositories owned by the user.
 
         Returns:
             List of commit data.
@@ -100,6 +102,8 @@ class GitHubClient:
         query = f"author:{username} committer-date:{since.strftime('%Y-%m-%d')}..{until.strftime('%Y-%m-%d')}"
         if repository:
             query += f" repo:{repository}"
+        elif exclude_personal:
+            query += f" -user:{username}"
         commits = CommitList()
         total_additions = 0
         total_deletions = 0
@@ -152,7 +156,8 @@ class GitHubClient:
     def get_user_pull_requests(self, username: str, state: str = "all",
                               since: Optional[datetime] = None,
                               until: Optional[datetime] = None,
-                              repository: Optional[str] = None) -> List[Dict]:
+                              repository: Optional[str] = None,
+                              exclude_personal: bool = False) -> List[Dict]:
         """
         Get pull requests created by a user.
 
@@ -162,6 +167,7 @@ class GitHubClient:
             since: Start date for PR search.
             until: End date for PR search.
             repository: Repository name to filter by (e.g., "owner/repo").
+            exclude_personal: If True, exclude repositories owned by the user.
 
         Returns:
             List of pull request data.
@@ -174,6 +180,8 @@ class GitHubClient:
         query = f"author:{username} created:{since.strftime('%Y-%m-%d')}..{until.strftime('%Y-%m-%d')}"
         if repository:
             query += f" repo:{repository}"
+        elif exclude_personal:
+            query += f" -user:{username}"
         pull_requests = []
 
         try:
@@ -200,7 +208,8 @@ class GitHubClient:
     def get_user_issues(self, username: str, state: str = "all",
                        since: Optional[datetime] = None,
                        until: Optional[datetime] = None,
-                       repository: Optional[str] = None) -> List[Dict]:
+                       repository: Optional[str] = None,
+                       exclude_personal: bool = False) -> List[Dict]:
         """
         Get issues created by a user.
 
@@ -210,6 +219,7 @@ class GitHubClient:
             since: Start date for issue search.
             until: End date for issue search.
             repository: Repository name to filter by (e.g., "owner/repo").
+            exclude_personal: If True, exclude repositories owned by the user.
 
         Returns:
             List of issue data.
@@ -222,6 +232,8 @@ class GitHubClient:
         query = f"author:{username} is:issue created:{since.strftime('%Y-%m-%d')}..{until.strftime('%Y-%m-%d')}"
         if repository:
             query += f" repo:{repository}"
+        elif exclude_personal:
+            query += f" -user:{username}"
         issues = []
 
         try:
@@ -247,7 +259,8 @@ class GitHubClient:
 
     def get_user_reviews(self, username: str, since: Optional[datetime] = None,
                         until: Optional[datetime] = None,
-                        repository: Optional[str] = None) -> List[Dict]:
+                        repository: Optional[str] = None,
+                        exclude_personal: bool = False) -> List[Dict]:
         """
         Get code reviews done by a user.
 
@@ -256,6 +269,7 @@ class GitHubClient:
             since: Start date for review search.
             until: End date for review search.
             repository: Repository name to filter by (e.g., "owner/repo").
+            exclude_personal: If True, exclude repositories owned by the user.
 
         Returns:
             List of review data.
@@ -276,6 +290,8 @@ class GitHubClient:
         query = f"q=reviewed-by:{username}+updated:{since.strftime('%Y-%m-%d')}..{until.strftime('%Y-%m-%d')}"
         if repository:
             query += f"+repo:{repository}"
+        elif exclude_personal:
+            query += f"+-user:{username}"
         url = f"{self.api_url}/search/issues?{query}"
 
         try:
@@ -382,7 +398,8 @@ class GitHubClient:
     def get_user_activity_summary(self, username: str, since: Optional[datetime] = None,
                                  until: Optional[datetime] = None,
                                  repository: Optional[str] = None,
-                                 aggregation: Optional[str] = None) -> Dict:
+                                 aggregation: Optional[str] = None,
+                                 exclude_personal: bool = False) -> Dict:
         """
         Get a summary of user activity.
 
@@ -392,6 +409,7 @@ class GitHubClient:
             until: End date for activity search.
             repository: Repository name to filter by (e.g., "owner/repo").
             aggregation: Type of aggregation ('week', 'month', or None for no aggregation).
+            exclude_personal: If True, exclude repositories owned by the user.
 
         Returns:
             Dictionary with activity summary.
@@ -401,10 +419,10 @@ class GitHubClient:
         if not until:
             until = datetime.now()
 
-        commits = self.get_user_commits(username, since, until, repository)
-        pull_requests = self.get_user_pull_requests(username, "all", since, until, repository)
-        issues = self.get_user_issues(username, "all", since, until, repository)
-        reviews = self.get_user_reviews(username, since, until, repository)
+        commits = self.get_user_commits(username, since, until, repository, exclude_personal)
+        pull_requests = self.get_user_pull_requests(username, "all", since, until, repository, exclude_personal)
+        issues = self.get_user_issues(username, "all", since, until, repository, exclude_personal)
+        reviews = self.get_user_reviews(username, since, until, repository, exclude_personal)
 
         # Get user profile info
         user = self.get_user(username)

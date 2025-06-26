@@ -76,6 +76,7 @@ github-activities summary <username>
 - `--days`, `-d`: Number of days to look back for activity (default: 365)
 - `--repository`, `-r`: Filter activity to a specific repository (format: 'owner/repo'). If not provided, all repositories will be included
 - `--aggregation`, `-a`: Aggregate data by week or month (values: 'week' or 'month')
+- `--exclude-personal`, `-e`: Exclude repositories owned by the user (personal repositories)
 
 ### Exporting activity data
 ```bash
@@ -90,6 +91,7 @@ github-activities export <username> --output data.json
 - `--repository`, `-r`: Filter activity to a specific repository (format: 'owner/repo'). If not provided, all repositories will be included
 - `--aggregation`, `-a`: Aggregate data by week or month (values: 'week' or 'month'). For HTML output, 'week' is used by default if not specified
 - `--format`, `-f`: Output format (values: 'json' or 'html', default: 'json')
+- `--exclude-personal`, `-e`: Exclude repositories owned by the user (personal repositories)
 
 ## Examples
 
@@ -148,6 +150,21 @@ github-activities export octocat --format html --output octocat_report.html
 github-activities export octocat --format html --aggregation week --output octocat_weekly_report.html
 ```
 
+### Exclude personal repositories (only show organization contributions)
+```bash
+github-activities summary octocat --exclude-personal
+```
+
+### Export activity excluding personal repositories
+```bash
+github-activities export octocat --exclude-personal --output octocat_org_activity.json
+```
+
+### Compare users excluding their personal repositories
+```bash
+github-activities compare octocat torvalds --exclude-personal
+```
+
 ## API Reference
 
 If you want to use the GitHub Activities Tracker as a library in your own Python code, you can import the `GitHubClient` class:
@@ -169,6 +186,9 @@ activity = client.get_user_activity_summary("octocat", aggregation="week")
 
 # Get user activity summary with monthly aggregation
 activity = client.get_user_activity_summary("octocat", aggregation="month")
+
+# Get user activity summary excluding personal repositories
+activity = client.get_user_activity_summary("octocat", exclude_personal=True)
 
 # Get specific activity types
 commits = client.get_user_commits("octocat")
